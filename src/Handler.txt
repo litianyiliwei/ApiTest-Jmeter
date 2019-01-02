@@ -1,0 +1,53 @@
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.JSONArray;  
+
+//作用：实现csv中的嵌套变量。提取{"Password":"000000","Message":"${token}"}中的${token}并求值vars.get(${token})后将值替换${token}
+//对象中的参数OrganizationId=${carrier_OrganizationId}&OrganizationCode=${carrier_OrganizationCode}（用_分割，用.分割竟然有问题）
+//Name	method	path	input	output	getparm(不能为空，如：$.Data[0].CategoryId)	parmname(可能是对象，也可能是string)
+
+public Map hanle(String input)
+{	
+	Map map = new HashMap();	
+	String pattParm = "\\\\$\\\\{.*?\\\\}";
+	Pattern pattern = Pattern.compile(pattParm);
+	Matcher matcher = pattern.matcher(input);
+	while(matcher.find()) {
+		String parm = matcher.group();
+		String temp = parm.replace("${","").replace("}","");
+		map.put(temp,parm);
+	}
+	return map;
+}
+
+
+String input = vars.get("input");
+Map map = hanle(input);
+for(String key:map.keySet())
+{
+	String temp = map.get(key);
+	String actParm = "";
+	if(!key.contains("_"))
+	{
+		actParm = vars.get(key);
+	}
+	else
+	{
+		String[] strs = key.split("_");
+		String str = vars.get(strs[0]);
+		JSONObject obj = JSON.parseObject(str);
+		for(i=1; i<strs.length; i++)
+		{
+			if(i == strs.length-1)
+				actParm = obj.getString(strs[i]);
+			else
+				obj = obj.getJSONObject(strs[i]);
+		}
+	}
+	input = input.replace(temp,actParm);
+}
+props.put("inputParm",input);
+
+
